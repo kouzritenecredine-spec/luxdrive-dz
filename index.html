@@ -263,6 +263,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);line-
 @media(max-width:1024px){.details-wrap{grid-template-columns:1fr}.cal-grid{grid-template-columns:1fr}.f-grid{grid-template-columns:1fr 1fr}.admin-form{grid-template-columns:1fr}}
 @media(max-width:768px){.nav-links{display:none}.mobile-btn{display:block}.hero-title{font-size:30px}.offers-grid{grid-template-columns:1fr}.cat-grid{grid-template-columns:1fr}.cars-grid{grid-template-columns:1fr}.details-features{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}.pay-methods{flex-direction:column}.f-grid{grid-template-columns:1fr;gap:24px}.confirm-card{padding:32px 20px}.cal-car{flex-direction:column;text-align:center}.admin-grid{grid-template-columns:1fr 1fr}.admin-table{display:block;overflow-x:auto}}
 </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -756,6 +757,11 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);line-
 <div>
 <label class="admin-form-label">رسوم الخدمة (%)</label>
 <input type="number" class="admin-form-input" id="siteFee" value="5" min="0" max="50">
+</div>
+<div class="admin-form-full">
+<label class="admin-form-label">كلمة مرور لوحة التحكم</label>
+<input type="password" class="admin-form-input" id="adminPass" placeholder="اتركها فارغة للإبقاء على الحالية">
+<p style="color:var(--muted);font-size:12px;margin-top:4px">كلمة المرور الافتراضية: admin123</p>
 </div>
 </div>
 <div class="admin-form-actions">
@@ -1340,18 +1346,19 @@ document.getElementById('offerEditId').value='';
 
 function loadSettingsForm(){
 const s = data.settings;
-document.getElementById('siteName').value = s.name;
-document.getElementById('sitePhone').value = s.phone;
-document.getElementById('siteAddress').value = s.address;
-document.getElementById('siteEmail').value = s.email;
-document.getElementById('siteDesc').value = s.desc;
-document.getElementById('siteHours').value = s.hours;
-document.getElementById('siteFee').value = s.fee;
+document.getElementById('siteName').value = s.name || '';
+document.getElementById('sitePhone').value = s.phone || '';
+document.getElementById('siteAddress').value = s.address || '';
+document.getElementById('siteEmail').value = s.email || '';
+document.getElementById('siteDesc').value = s.desc || '';
+document.getElementById('siteHours').value = s.hours || '';
+document.getElementById('siteFee').value = s.fee || 5;
 }
 
 function saveSettings(e){
 e.preventDefault();
-data.settings = {
+const newPass = document.getElementById('adminPass').value;
+const settings = {
 name: document.getElementById('siteName').value,
 phone: document.getElementById('sitePhone').value,
 address: document.getElementById('siteAddress').value,
@@ -1359,9 +1366,12 @@ email: document.getElementById('siteEmail').value,
 desc: document.getElementById('siteDesc').value,
 hours: document.getElementById('siteHours').value,
 fee: parseInt(document.getElementById('siteFee').value) || 5,
-city: document.getElementById('siteAddress').value.split('،').pop().trim()
+city: document.getElementById('siteAddress').value.split('،').pop().trim(),
+adminPass: newPass || data.settings.adminPass || 'admin123'
 };
+data.settings = settings;
 saveSettings(data.settings);
+document.getElementById('adminPass').value = '';
 showToast('تم حفظ الإعدادات بنجاح');
 }
 
@@ -1439,8 +1449,70 @@ else{n.style.background='rgba(10,10,10,0.9)';n.style.padding='14px 5%'}
 // ===== INIT =====
 renderHome();
 
-// Secret admin access: double-click logo
-document.querySelector('.logo').addEventListener('dblclick',showAdmin);
+// Admin access: double-click logo → shows login
+let isLoggedIn = false;
+let adminPassword = '';
+
+function loadAdminPassword(){
+const s = JSON.parse(localStorage.getItem('luxdrive_settings') || '{}');
+adminPassword = s.adminPass || 'admin123';
+}
+
+document.querySelector('.logo').addEventListener('dblclick',function(){
+loadAdminPassword();
+if(isLoggedIn){showAdmin();}
+else{document.getElementById('loginModal').classList.add('active');document.getElementById('loginPass').focus();}
+});
+
+function closeLogin(){
+document.getElementById('loginModal').classList.remove('active');
+document.getElementById('loginPass').value='';
+document.getElementById('loginError').style.display='none';
+}
+
+function doLogin(e){
+e.preventDefault();
+loadAdminPassword();
+const pass = document.getElementById('loginPass').value;
+if(pass === adminPassword){
+isLoggedIn = true;
+closeLogin();
+showAdmin();
+showToast('تم تسجيل الدخول بنجاح');
+}else{
+document.getElementById('loginError').style.display='block';
+document.getElementById('loginPass').value='';
+}
+}
+
+function logout(){
+isLoggedIn = false;
+showToast('تم تسجيل الخروج');
+goHome();
+}
 </script>
+
+<!-- Login Modal -->
+<div class="modal-overlay" id="loginModal" style="display:flex">
+<div class="modal" style="max-width:400px">
+<div class="modal-head">
+<div class="modal-title"><i class="fas fa-lock" style="color:var(--gold);margin-left:8px"></i> دخول المسؤول</div>
+<button class="modal-close" onclick="closeLogin()"><i class="fas fa-times"></i></button>
+</div>
+<div style="text-align:center;margin-bottom:20px">
+<i class="fas fa-user-shield" style="font-size:48px;color:var(--gold);margin-bottom:12px"></i>
+<p style="color:var(--muted);font-size:14px">أدخل كلمة المرور للوصول إلى لوحة التحكم</p>
+</div>
+<form onsubmit="doLogin(event)">
+<div class="form-g">
+<label class="form-l">كلمة المرور</label>
+<input type="password" class="form-i" id="loginPass" placeholder="••••••" style="text-align:center;font-size:18px;letter-spacing:4px">
+</div>
+<div id="loginError" style="color:var(--red);font-size:13px;text-align:center;margin-bottom:12px;display:none">كلمة المرور غير صحيحة</div>
+<button type="submit" class="submit-btn"><i class="fas fa-sign-in-alt"></i> دخول</button>
+</form>
+</div>
+</div>
+
 </body>
 </html>
