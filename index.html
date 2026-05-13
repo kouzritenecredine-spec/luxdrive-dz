@@ -264,6 +264,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);line-
 @media(max-width:768px){.nav-links{display:none}.mobile-btn{display:block}.hero-title{font-size:30px}.offers-grid{grid-template-columns:1fr}.cat-grid{grid-template-columns:1fr}.cars-grid{grid-template-columns:1fr}.details-features{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}.pay-methods{flex-direction:column}.f-grid{grid-template-columns:1fr;gap:24px}.confirm-card{padding:32px 20px}.cal-car{flex-direction:column;text-align:center}.admin-grid{grid-template-columns:1fr 1fr}.admin-table{display:block;overflow-x:auto}}
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -818,6 +819,25 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);line-
 <div class="toast" id="toast"></div>
 
 <script>
+
+// ===== JSONBIN.IO CONFIG (CLOUD DATABASE) =====
+// 1. Go to https://jsonbin.io and create a free account ✓ DONE
+// 2. Create a new Bin with content: {"bookings":[]} ✓ DONE
+// 3. Copy your X-Master-Key from API Keys page
+// 4. Replace ONLY the API key below (لا تلمس الباقي):
+const JSONBIN_ID = '6a04ab1ac0954111d81b100c';  // ← Bin ID جاهز، لا تلمس
+const JSONBIN_KEY = 'YOUR_API_KEY_HERE';         // ← ضع هنا X-Master-Key فقط
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+
+// Helper: extracts bookings array whether record is [] or {bookings:[]}
+function extractBookings(record){
+  if(Array.isArray(record)) return record;
+  if(record && Array.isArray(record.bookings)) return record.bookings;
+  return [];
+}
+// Helper: wraps bookings for JSONBin
+function wrapBookings(arr){ return {bookings: arr}; }
+
 // ===== DEFAULT DATA =====
 const DEFAULT_CARS = {
 economy: [
@@ -1126,57 +1146,58 @@ let v=e.target.value.replace(/\D/g,'');if(v.length>=2)v=v.substring(0,2)+'/'+v.s
 e.target.value=v;document.getElementById('dispExp').textContent=v||'MM/YY';
 });
 
-function doPay(e){
-e.preventDefault();
-const bid='LD-'+new Date().getFullYear()+'-'+Math.floor(1000+Math.random()*9000);
-saveBooking({id:bid,car:curCar?curCar.name:'',pickup:book.pickup||'',ret:book.ret||'',payMethod:'بطاقة ذهبية',total:book.total||0,date:new Date().toISOString(),status:'مؤكد'});
-document.getElementById('c-id').textContent='#'+bid;
-document.getElementById('c-car').textContent=curCar?curCar.name:'';
-document.getElementById('c-pick').textContent=book.pickup||'--';
-document.getElementById('c-ret').textContent=book.ret||'--';
-document.getElementById('c-pay').textContent='بطاقة ذهبية';
-document.getElementById('c-total').textContent=fmt(book.total||0);
-show('p-confirm');
+async function doPay(e){
+  e.preventDefault();
+  const bid='LD-'+new Date().getFullYear()+'-'+Math.floor(1000+Math.random()*9000);
+  await saveBooking({id:bid,car:curCar?curCar.name:'',pickup:book.pickup||'',ret:book.ret||'',payMethod:'بطاقة ذهبية',total:book.total||0,date:new Date().toISOString(),status:'مؤكد'});
+  document.getElementById('c-id').textContent='#'+bid;
+  document.getElementById('c-car').textContent=curCar?curCar.name:'';
+  document.getElementById('c-pick').textContent=book.pickup||'--';
+  document.getElementById('c-ret').textContent=book.ret||'--';
+  document.getElementById('c-pay').textContent='بطاقة ذهبية';
+  document.getElementById('c-total').textContent=fmt(book.total||0);
+  show('p-confirm');
 }
-function doCashPay(){
-const bid='LD-'+new Date().getFullYear()+'-'+Math.floor(1000+Math.random()*9000);
-saveBooking({id:bid,car:curCar?curCar.name:'',pickup:book.pickup||'',ret:book.ret||'',payMethod:'الدفع عند القدوم',total:book.total||0,date:new Date().toISOString(),status:'في الانتظار'});
-document.getElementById('c-id').textContent='#'+bid;
-document.getElementById('c-car').textContent=curCar?curCar.name:'';
-document.getElementById('c-pick').textContent=book.pickup||'--';
-document.getElementById('c-ret').textContent=book.ret||'--';
-document.getElementById('c-pay').textContent='الدفع عند القدوم';
-document.getElementById('c-total').textContent=fmt(book.total||0);
-show('p-confirm');
+async function doCashPay(){
+  const bid='LD-'+new Date().getFullYear()+'-'+Math.floor(1000+Math.random()*9000);
+  await saveBooking({id:bid,car:curCar?curCar.name:'',pickup:book.pickup||'',ret:book.ret||'',payMethod:'الدفع عند القدوم',total:book.total||0,date:new Date().toISOString(),status:'في الانتظار'});
+  document.getElementById('c-id').textContent='#'+bid;
+  document.getElementById('c-car').textContent=curCar?curCar.name:'';
+  document.getElementById('c-pick').textContent=book.pickup||'--';
+  document.getElementById('c-ret').textContent=book.ret||'--';
+  document.getElementById('c-pay').textContent='الدفع عند القدوم';
+  document.getElementById('c-total').textContent=fmt(book.total||0);
+  show('p-confirm');
 }
 
 // ===== ADMIN PANEL =====
-function showAdmin(){
-data = loadData();
-show('p-admin');
-renderAdminStats();
-renderAdminCars();
-renderAdminOffers();
-loadSettingsForm();
-switchTab('cars');
+async function showAdmin(){
+  data = loadData();
+  show('p-admin');
+  await renderAdminStats();
+  renderAdminCars();
+  renderAdminOffers();
+  loadSettingsForm();
+  switchTab('cars');
 }
 
-function renderAdminStats(){
-const totalCars = data.cars.economy.length + data.cars.mid.length + data.cars.luxury.length;
-document.getElementById('stat-cars').textContent = totalCars;
-document.getElementById('stat-offers').textContent = data.offers.length;
-const bookingsCount = document.getElementById('stat-bookings');
-if(bookingsCount)bookingsCount.textContent = getBookings().length;
+async function renderAdminStats(){
+  const totalCars = data.cars.economy.length + data.cars.mid.length + data.cars.luxury.length;
+  document.getElementById('stat-cars').textContent = totalCars;
+  document.getElementById('stat-offers').textContent = data.offers.length;
+  const bookings = await getBookings();
+  const bookingsCount = document.getElementById('stat-bookings');
+  if(bookingsCount) bookingsCount.textContent = bookings.length;
 }
 
-function switchTab(tab){
-document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
-document.getElementById('tab-'+tab).classList.add('active');
-document.getElementById('panel-cars').style.display = tab==='cars'?'block':'none';
-document.getElementById('panel-offers').style.display = tab==='offers'?'block':'none';
-document.getElementById('panel-bookings').style.display = tab==='bookings'?'block':'none';
-document.getElementById('panel-settings').style.display = tab==='settings'?'block':'none';
-if(tab==='bookings')renderAdminBookings();
+async function switchTab(tab){
+  document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('panel-cars').style.display = tab==='cars'?'block':'none';
+  document.getElementById('panel-offers').style.display = tab==='offers'?'block':'none';
+  document.getElementById('panel-bookings').style.display = tab==='bookings'?'block':'none';
+  document.getElementById('panel-settings').style.display = tab==='settings'?'block':'none';
+  if(tab==='bookings') await renderAdminBookings();
 }
 
 function renderAdminCars(){
@@ -1208,33 +1229,33 @@ ${allCars.map(c=>`
 </table>`;
 }
 
-function renderAdminBookings(){
-const container = document.getElementById('admin-bookings-table');
-const bookings = getBookings();
-if(bookings.length===0){container.innerHTML='<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>لا توجد حجوزات بعد</p></div>';return;}
-container.innerHTML = `
-<table class="admin-table">
-<thead><tr>
-<th>رقم الحجز</th><th>السيارة</th><th>الاستلام</th><th>التسليم</th><th>الدفع</th><th>المبلغ</th><th>الحالة</th><th>إجراءات</th>
-</tr></thead>
-<tbody>
-${bookings.map(b=>`
-<tr>
-<td><div class="car-name">#${b.id}</div></td>
-<td><div class="car-name">${b.car}</div></td>
-<td><div class="car-cat">${b.pickup}</div></td>
-<td><div class="car-cat">${b.ret}</div></td>
-<td><div class="car-cat">${b.payMethod}</div></td>
-<td><div class="car-price">${fmt(b.total)}</div></td>
-<td><span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:${b.status==='مؤكد'?'rgba(34,197,94,.15)':b.status==='في الانتظار'?'rgba(201,168,76,.15)':'rgba(239,68,68,.15)'};color:${b.status==='مؤكد'?'var(--green)':b.status==='في الانتظار'?'var(--gold)':'var(--red)'}">${b.status}</span></td>
-<td><div class="actions">
-<button class="btn-green" onclick="updateBookingStatus('${b.id}','مؤكد')" title="تأكيد"><i class="fas fa-check"></i></button>
-<button class="btn-blue" onclick="updateBookingStatus('${b.id}','مكتمل')" title="مكتمل"><i class="fas fa-check-double"></i></button>
-<button class="btn-red" onclick="deleteBooking('${b.id}')"><i class="fas fa-trash"></i></button>
-</div></td>
-</tr>`).join('')}
-</tbody>
-</table>`;
+async function renderAdminBookings(){
+  const container = document.getElementById('admin-bookings-table');
+  const bookings = await getBookings();
+  if(bookings.length===0){container.innerHTML='<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>لا توجد حجوزات بعد</p></div>';return;}
+  container.innerHTML = `
+  <table class="admin-table">
+  <thead><tr>
+  <th>رقم الحجز</th><th>السيارة</th><th>الاستلام</th><th>التسليم</th><th>الدفع</th><th>المبلغ</th><th>الحالة</th><th>إجراءات</th>
+  </tr></thead>
+  <tbody>
+  ${bookings.map(b=>`
+  <tr>
+  <td><div class="car-name">#${b.id}</div></td>
+  <td><div class="car-name">${b.car}</div></td>
+  <td><div class="car-cat">${b.pickup}</div></td>
+  <td><div class="car-cat">${b.ret}</div></td>
+  <td><div class="car-cat">${b.payMethod}</div></td>
+  <td><div class="car-price">${fmt(b.total)}</div></td>
+  <td><span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:${b.status==='مؤكد'?'rgba(34,197,94,.15)':b.status==='في الانتظار'?'rgba(201,168,76,.15)':'rgba(239,68,68,.15)'};color:${b.status==='مؤكد'?'var(--green)':b.status==='في الانتظار'?'var(--gold)':'var(--red)'}">${b.status}</span></td>
+  <td><div class="actions">
+  <button class="btn-green" onclick="updateBookingStatus('${b.id}','مؤكد')" title="تأكيد"><i class="fas fa-check"></i></button>
+  <button class="btn-blue" onclick="updateBookingStatus('${b.id}','مكتمل')" title="مكتمل"><i class="fas fa-check-double"></i></button>
+  <button class="btn-red" onclick="deleteBooking('${b.id}')"><i class="fas fa-trash"></i></button>
+  </div></td>
+  </tr>`).join('')}
+  </tbody>
+  </table>`;
 }
 
 function renderAdminOffers(){
@@ -1422,56 +1443,74 @@ showToast('تم حفظ الإعدادات بنجاح');
 }
 
 // ===== EXPORT / IMPORT =====
-function exportData(){
-const exportObj = {
-version:'1.0',
-exportedAt: new Date().toISOString(),
-cars: data.cars,
-offers: data.offers,
-settings: data.settings
-};
-const blob = new Blob([JSON.stringify(exportObj,null,2)],{type:'application/json'});
-const url = URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = url;
-a.download = 'luxdrive-backup-'+new Date().toISOString().split('T')[0]+'.json';
-a.click();
-URL.revokeObjectURL(url);
-showToast('تم تصدير البيانات بنجاح');
+async function exportData(){
+  const bookings = await getBookings();
+  const exportObj = {
+    version:'1.0',
+    exportedAt: new Date().toISOString(),
+    cars: data.cars,
+    offers: data.offers,
+    settings: data.settings,
+    bookings: bookings
+  };
+  const blob = new Blob([JSON.stringify(exportObj,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'luxdrive-backup-'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('تم تصدير البيانات بنجاح');
 }
 
-function importData(input){
-const file = input.files[0];
-if(!file)return;
-const reader = new FileReader();
-reader.onload = function(e){
-try{
-const imported = JSON.parse(e.target.result);
-if(imported.cars){data.cars=imported.cars;saveCars(data.cars);}
-if(imported.offers){data.offers=imported.offers;saveOffers(data.offers);}
-if(imported.settings){data.settings=imported.settings;saveSettings(data.settings);}
-renderAdminCars();
-renderAdminOffers();
-renderAdminStats();
-loadSettingsForm();
-showToast('تم استيراد البيانات بنجاح');
-}catch(err){showToast('خطأ في قراءة الملف','error');}
-};
-reader.readAsText(file);
-input.value='';
+async function importData(input){
+  const file = input.files[0];
+  if(!file)return;
+  const reader = new FileReader();
+  reader.onload = async function(e){
+    try{
+      const imported = JSON.parse(e.target.result);
+      if(imported.cars){data.cars=imported.cars;saveCars(data.cars);}
+      if(imported.offers){data.offers=imported.offers;saveOffers(data.offers);}
+      if(imported.settings){data.settings=imported.settings;saveSettings(data.settings);}
+      if(imported.bookings){
+        await fetch(JSONBIN_URL, {
+          method:'PUT',
+          headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY},
+          body:JSON.stringify(wrapBookings(imported.bookings))
+        });
+        localStorage.setItem('luxdrive_bookings',JSON.stringify(imported.bookings));
+      }
+      await renderAdminStats();
+      renderAdminCars();
+      renderAdminOffers();
+      loadSettingsForm();
+      showToast('تم استيراد البيانات بنجاح');
+    }catch(err){showToast('خطأ في قراءة الملف','error');}
+  };
+  reader.readAsText(file);
+  input.value='';
 }
 
-function resetAllData(){
-if(!confirm('هل أنت متأكد؟ سيتم حذف جميع البيانات وإعادتها للوضع الافتراضي!'))return;
-localStorage.removeItem('luxdrive_cars');
-localStorage.removeItem('luxdrive_offers');
-localStorage.removeItem('luxdrive_settings');
-data = loadData();
-renderAdminCars();
-renderAdminOffers();
-renderAdminStats();
-loadSettingsForm();
-showToast('تم إعادة تعيين جميع البيانات');
+async function resetAllData(){
+  if(!confirm('هل أنت متأكد؟ سيتم حذف جميع البيانات وإعادتها للوضع الافتراضي!'))return;
+  localStorage.removeItem('luxdrive_cars');
+  localStorage.removeItem('luxdrive_offers');
+  localStorage.removeItem('luxdrive_settings');
+  localStorage.removeItem('luxdrive_bookings');
+  try{
+    await fetch(JSONBIN_URL, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY},
+      body:JSON.stringify(wrapBookings([]))
+    });
+  }catch(e){}
+  data = loadData();
+  await renderAdminStats();
+  renderAdminCars();
+  renderAdminOffers();
+  loadSettingsForm();
+  showToast('تم إعادة تعيين جميع البيانات');
 }
 
 // ===== TOAST =====
@@ -1504,28 +1543,70 @@ const s = JSON.parse(localStorage.getItem('luxdrive_settings') || '{}');
 adminPassword = s.adminPass || 'admin123';
 }
 
-function saveBooking(b){
-let bookings = JSON.parse(localStorage.getItem('luxdrive_bookings') || '[]');
-bookings.unshift(b);
-localStorage.setItem('luxdrive_bookings',JSON.stringify(bookings));
+async function saveBooking(b){
+  try{
+    const bookings = await getBookings();
+    bookings.unshift(b);
+    await fetch(JSONBIN_URL, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY},
+      body:JSON.stringify(wrapBookings(bookings))
+    });
+    localStorage.setItem('luxdrive_bookings',JSON.stringify(bookings));
+  }catch(e){
+    let local = JSON.parse(localStorage.getItem('luxdrive_bookings') || '[]');
+    local.unshift(b);
+    localStorage.setItem('luxdrive_bookings',JSON.stringify(local));
+    console.error('Cloud save failed, saved locally', e);
+  }
 }
 
-function getBookings(){
-return JSON.parse(localStorage.getItem('luxdrive_bookings') || '[]');
+async function getBookings(){
+  try{
+    const res = await fetch(JSONBIN_URL, {
+      headers:{'X-Master-Key':JSONBIN_KEY}
+    });
+    if(!res.ok) return JSON.parse(localStorage.getItem('luxdrive_bookings') || '[]');
+    const data = await res.json();
+    const bookings = extractBookings(data.record);
+    localStorage.setItem('luxdrive_bookings', JSON.stringify(bookings));
+    return bookings;
+  }catch(e){
+    return JSON.parse(localStorage.getItem('luxdrive_bookings') || '[]');
+  }
 }
 
-function deleteBooking(id){
-if(!confirm('هل أنت متأكد من حذف هذا الحجز؟'))return;
-let bookings = getBookings().filter(b=>b.id!==id);
-localStorage.setItem('luxdrive_bookings',JSON.stringify(bookings));
-renderAdminBookings();
-showToast('تم حذف الحجز');
+async function deleteBooking(id){
+  if(!confirm('هل أنت متأكد من حذف هذا الحجز؟'))return;
+  try{
+    let bookings = await getBookings();
+    bookings = bookings.filter(b=>b.id!==id);
+    await fetch(JSONBIN_URL, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY},
+      body:JSON.stringify(wrapBookings(bookings))
+    });
+    localStorage.setItem('luxdrive_bookings',JSON.stringify(bookings));
+    renderAdminBookings();
+    showToast('تم حذف الحجز');
+  }catch(e){showToast('خطأ في الاتصال بالسحابة','error');}
 }
 
-function updateBookingStatus(id,status){
-let bookings = getBookings();
-const idx = bookings.findIndex(b=>b.id===id);
-if(idx!==-1){bookings[idx].status=status;localStorage.setItem('luxdrive_bookings',JSON.stringify(bookings));renderAdminBookings();}
+async function updateBookingStatus(id,status){
+  try{
+    let bookings = await getBookings();
+    const idx = bookings.findIndex(b=>b.id===id);
+    if(idx!==-1){
+      bookings[idx].status=status;
+      await fetch(JSONBIN_URL, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY},
+        body:JSON.stringify(wrapBookings(bookings))
+      });
+      localStorage.setItem('luxdrive_bookings',JSON.stringify(bookings));
+      renderAdminBookings();
+    }
+  }catch(e){showToast('خطأ في التحديث','error');}
 }
 
 document.querySelector('.logo').addEventListener('dblclick',function(){
